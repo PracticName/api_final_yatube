@@ -1,22 +1,40 @@
-# TODO:  Напишите свой вариант
-from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework import permissions, viewsets
 
-from api.serializers import GroupSerializer
-from posts.models import Group
+from api.permissions import IsAuthorOrReadOnly
+from api.serializers import CommentSerializer, GroupSerializer, PostSerializer
+from posts.models import Group, Post
 
 
 class PostViewSet(viewsets.ModelViewSet):
-    pass
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthorOrReadOnly, permissions.IsAuthenticated)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    pass
+    serializer_class = CommentSerializer
+    permission_classes = (IsAuthorOrReadOnly, permissions.IsAuthenticated)
+
+    def get_post(self):
+        return get_object_or_404(
+            Post, id=self.kwargs.get('post_id')
+        )
+
+    def get_queryset(self):
+        return self.get_post().comments.all()
+
+    def perform_create(self, serializer):
+        serializer.save(
+            author=self.request.user, post=self.get_post()
+        )
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-       Получение списка доступных сообществ.
-       Получение информации о сообществе по id.
-    """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
