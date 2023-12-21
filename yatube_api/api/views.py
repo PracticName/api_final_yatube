@@ -1,25 +1,33 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework import permissions, viewsets
+from rest_framework import filters, permissions, viewsets
 
 from api.permissions import IsAuthorOrReadOnly
-from api.serializers import CommentSerializer, GroupSerializer, PostSerializer
-from posts.models import Group, Post
+from api.serializers import (
+    CommentSerializer, FollowSerializer, GroupSerializer, PostSerializer
+)
+from posts.models import Follow, Group, Post
 
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     pagination_class = LimitOffsetPagination
-    permission_classes = (IsAuthorOrReadOnly, permissions.IsAuthenticated)
+    permission_classes = (IsAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def get_permissions(self):
+        if self.action == 'create':
+            return (permissions.IsAuthenticated(),)
+        return super().get_permissions()
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthorOrReadOnly, permissions.IsAuthenticated)
+    permission_classes = (IsAuthorOrReadOnly,)
 
     def get_post(self):
         return get_object_or_404(
@@ -34,7 +42,23 @@ class CommentViewSet(viewsets.ModelViewSet):
             author=self.request.user, post=self.get_post()
         )
 
+    def get_permissions(self):
+        if self.action == 'create':
+            return (permissions.IsAuthenticated(),)
+        return super().get_permissions()
+
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+
+
+class FollowView(ListCreateAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('user__username',)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
