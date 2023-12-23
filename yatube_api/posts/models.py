@@ -10,7 +10,7 @@ class Group(models.Model):
     slug = models.SlugField(
         unique=True,
         max_length=50,
-        validators=[RegexValidator(regex=r'^[-a-zA-Z0-9_]+$'),],
+        validators=[RegexValidator(regex=r'^[-a-zA-Z0-9_]+$'), ],
     )
     description = models.TextField()
 
