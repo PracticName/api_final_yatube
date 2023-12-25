@@ -33,47 +33,26 @@ class GroupSerializer(serializers.ModelSerializer):
 
 class FollowSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
-        slug_field='username', read_only=True
+        slug_field='username',
+        read_only=True, default=serializers.CurrentUserDefault()
     )
     following = serializers.SlugRelatedField(
         queryset=User.objects.all(), slug_field='username')
 
     def validate_following(self, value):
-        if Follow.objects.filter(
-            user=self.context['request'].user,
-            following=value
-        ).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя')
-        return value
-
-    def validate(self, data):
-        if data['following'] == self.context['request'].user:
+        if value == self.context['request'].user:
             raise serializers.ValidationError(
                 'Пользователь не может подписаться сам на себя'
             )
-        return data
+        return value
 
     class Meta:
         model = Follow
         fields = ('user', 'following',)
-        '''validators = [
+        validators = [
             UniqueTogetherValidator(
                 queryset=Follow.objects.all(),
                 fields=('user', 'following'),
-                message='Пользователь не может подписаться сам на себя'
+                message='Вы уже подписаны на этого пользователя'
             )
-        ]'''
-
-    '''def validate(self, data):
-        if Follow.objects.filter(
-            user=self.context['request'].user,
-            following=data['following']
-        ).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого пользователя')
-        if data['following'] == self.context['request'].user:
-            raise serializers.ValidationError(
-                'Пользователь не может подписаться сам на себя'
-            )
-        return data'''
+        ]
